@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>How many Games do you need?</title>
+  <title>How many Games do you need</title>
   <style>
     :root{
       --bg:#070A12;
@@ -19,15 +19,14 @@
     }
 
     *{ box-sizing:border-box; }
-    html,body{ height:100%; }
-
-    body{
+    html,body{
       margin:0;
       min-height:100vh;
       display:flex;
+      flex-direction:column;
       align-items:center;
       justify-content:center;
-      padding: 28px 16px;
+      padding: 28px 16px 56px;
       font-family: system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
       color: var(--text);
       background: var(--bg);
@@ -103,11 +102,21 @@
     }
 
     h1{
-      margin: 0 0 22px;
-      font-size: 20px;
-      font-weight: 750;
-      letter-spacing: -0.02em;
+      margin: 0 0 18px;
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      text-align: center;
       white-space: nowrap;
+    }
+
+    .title-wrap{
+      position: absolute;
+      top: 48px;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      pointer-events: none;
     }
 
     .row{ margin: 14px 0; }
@@ -135,7 +144,7 @@
       border-radius: 14px;
       outline:none;
       box-shadow: 0 12px 30px rgba(0,0,0,0.35);
-      transition: border-color .16s ease, box-shadow .16s ease, background .16s ease;
+      transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease, background .16s ease;
       font-variant-numeric: tabular-nums;
     }
 
@@ -187,8 +196,10 @@
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="title-wrap">
     <h1>How many Games do you need?</h1>
+  </div>
+  <div class="wrap">
 
     <div class="row">
       <label for="current">Your MMR</label>
@@ -219,6 +230,10 @@
     const winEl     = document.getElementById("winrate");
     const gamesEl   = document.getElementById("games");
 
+    function clamp(n, min, max){
+      return Math.min(max, Math.max(min, n));
+    }
+
     function ceilSafe(x){
       return Math.ceil(x - 1e-12);
     }
@@ -239,21 +254,16 @@
         return;
       }
 
-      // Nur nach oben clampen (0–100 möglich, >100 wird zu 100)
-      if (winrate > 100){
-        winrate = 100;
-        winEl.value = "100";
-      }
+      if (winrate > 100){ winrate = 100; winEl.value = "100"; }
+      if (winrate < 50 && winEl.value.length >= 2){ winrate = 50; winEl.value = "50"; }
 
-      // Wenn du bereits am Ziel bist
       if (current >= target){
         gamesEl.textContent = "0";
         return;
       }
 
-      // Bei <= 50% ist der erwartete Fortschritt <= 0
-      if (winrate <= 50){
-        gamesEl.textContent = "∞";
+      if (winrate === 50){
+        gamesEl.textContent = "Unlimited";
         return;
       }
 
@@ -262,7 +272,7 @@
       const avg = MMR_PER_GAME * (2 * p - 1);
 
       if (avg <= 0){
-        gamesEl.textContent = "∞";
+        gamesEl.textContent = "Unlimited";
         return;
       }
 
