@@ -533,17 +533,27 @@
       if (clamped !== raw) winEl.value = String(clamped);
     }
 
-    // Prevent non-number characters via inputmode/type=number already helps.
-    // Still: on paste, sanitize.
-    function sanitizeNumberInput(el, isFloat){
-      const v = String(el.value ?? "");
-      // keep digits, optional one decimal separator
-      const cleaned = v
-        .replace(",", ".")
-        .replace(isFloat ? /[^0-9.]/g : /[^0-9]/g, "")
-        .replace(isFloat ? /(\..*)\./g : /$/g, "$1");
+function sanitizeNumberInput(el, isFloat){
+  const v = String(el.value ?? "");
 
-      if (cleaned !== v) el.value = cleaned;
+  if (isFloat){
+    // Erlaubt digits + genau einen Dezimalpunkt
+    let cleaned = v.replace(",", ".").replace(/[^0-9.]/g, "");
+    const firstDot = cleaned.indexOf(".");
+    if (firstDot !== -1){
+      cleaned =
+        cleaned.slice(0, firstDot + 1) +
+        cleaned.slice(firstDot + 1).replace(/\./g, "");
+    }
+    if (cleaned !== v) el.value = cleaned;
+    return;
+  }
+
+  // Integer: nur Ziffern
+  const cleaned = v.replace(/[^0-9]/g, "");
+  if (cleaned !== v) el.value = cleaned;
+}
+
     }
 
     winEl.addEventListener("input", () => {
@@ -731,3 +741,4 @@
 </body>
 </html>
 ```
+
