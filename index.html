@@ -5,121 +5,143 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>MMR Games Needed</title>
   <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;max-width:520px;margin:40px auto;padding:0 16px;line-height:1.35}
-    h1{font-size:20px;margin:0 0 16px}
-    .row{margin:12px 0}
-    label{display:block;font-size:14px;margin-bottom:6px}
-    input{width:100%;padding:10px;font-size:16px}
-    .out{margin-top:18px;padding:12px;border:1px solid #ccc}
-    .big{font-size:22px;font-weight:700;margin-top:6px}
-    .muted{color:#555;font-size:13px}
+    body{
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      min-height:100vh;
+      margin:0;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      background:#fff;
+      color:#000;
+    }
+    .wrap{
+      width:320px;
+      text-align:center;
+    }
+    h1{
+      font-size:18px;
+      margin:0 0 20px;
+    }
+    .row{
+      margin:12px 0;
+    }
+    label{
+      display:block;
+      font-size:13px;
+      margin-bottom:4px;
+    }
+    input{
+      width:100%;
+      padding:6px 8px;
+      font-size:14px;
+      border:1px solid #999;
+      border-radius:6px;
+      text-align:center;
+    }
+    .result{
+      margin-top:20px;
+    }
+    .result-label{
+      font-size:13px;
+      color:#444;
+    }
+    .result-value{
+      font-size:28px;
+      font-weight:700;
+      margin-top:4px;
+    }
   </style>
 </head>
 <body>
-  <h1>MMR Games Needed</h1>
+  <div class="wrap">
+    <h1>MMR Games Needed</h1>
 
-  <div class="row">
-    <label for="current">Your MMR</label>
-    <input id="current" type="number" min="0" step="1" value="1000" />
-  </div>
+    <div class="row">
+      <label for="current">Your MMR</label>
+      <input id="current" type="number" min="0" step="1" value="1000" />
+    </div>
 
-  <div class="row">
-    <label for="target">Goal MMR</label>
-    <input id="target" type="number" min="0" step="1" value="5000" />
-  </div>
+    <div class="row">
+      <label for="target">Goal MMR</label>
+      <input id="target" type="number" min="0" step="1" value="5000" />
+    </div>
 
-  <div class="row">
-    <label for="winrate">Winrate (50–100)</label>
-    <input id="winrate" type="number" min="50" max="100" step="0.1" value="55" />
-    <div class="muted">Werte &lt; 50 werden auf 50 gesetzt, Werte &gt; 100 auf 100.</div>
-  </div>
+    <div class="row">
+      <label for="winrate">Winrate</label>
+      <input id="winrate" type="number" step="0.1" value="55" />
+    </div>
 
-  <div class="out">
-    <div class="muted">Games needed</div>
-    <div class="big" id="games">—</div>
+    <div class="result">
+      <div class="result-label">Games Needed</div>
+      <div class="result-value" id="games">—</div>
+    </div>
   </div>
 
   <script>
-    (function(){
-      const MMR_PER_GAME = 25;
+    const MMR_PER_GAME = 25;
 
-      const currentEl = document.getElementById("current");
-      const targetEl  = document.getElementById("target");
-      const winEl     = document.getElementById("winrate");
-      const gamesEl   = document.getElementById("games");
+    const currentEl = document.getElementById("current");
+    const targetEl  = document.getElementById("target");
+    const winEl     = document.getElementById("winrate");
+    const gamesEl   = document.getElementById("games");
 
-      function clamp(n, min, max){
-        return Math.min(max, Math.max(min, n));
+    function clamp(n, min, max){
+      return Math.min(max, Math.max(min, n));
+    }
+
+    function ceilSafe(x){
+      return Math.ceil(x - 1e-12);
+    }
+
+    function num(v){
+      const s = String(v ?? "").trim();
+      if (s === "") return NaN;
+      return Number(s);
+    }
+
+    function compute(){
+      const current = num(currentEl.value);
+      const target  = num(targetEl.value);
+      let winrate   = num(winEl.value);
+
+      if (!Number.isFinite(current) || !Number.isFinite(target) || !Number.isFinite(winrate)){
+        gamesEl.textContent = "—";
+        return;
       }
 
-      function ceilSafe(x){
-        // gegen Floating-Point-Reste (z.B. 25.00000000002)
-        return Math.ceil(x - 1e-12);
+      // Clamp winrate to 50–100
+      winrate = clamp(winrate, 50, 100);
+      if (Number(winEl.value) !== winrate) winEl.value = String(winrate);
+
+      if (current >= target){
+        gamesEl.textContent = "0";
+        return;
       }
 
-      function toNumberOrNaN(v){
-        // Number("") => 0 wäre schlecht; leer soll NaN sein
-        const s = String(v ?? "").trim();
-        if (s === "") return NaN;
-        return Number(s);
+      if (winrate === 50){
+        gamesEl.textContent = "Unlimited";
+        return;
       }
 
-      function compute(){
-        const current = toNumberOrNaN(currentEl.value);
-        const target  = toNumberOrNaN(targetEl.value);
-        let winPct    = toNumberOrNaN(winEl.value);
+      const delta = target - current;
+      const p = winrate / 100;
+      const avg = MMR_PER_GAME * (2 * p - 1);
 
-        // Wenn noch nicht alles sinnvoll befüllt ist:
-        if (!Number.isFinite(current) || !Number.isFinite(target) || !Number.isFinite(winPct)){
-          gamesEl.textContent = "—";
-          return;
-        }
-
-        // Winrate clamp 50..100 (wie gewünscht)
-        winPct = clamp(winPct, 50, 100);
-        // Clamp auch im Input sichtbar machen
-        if (Number(winEl.value) !== winPct) winEl.value = String(winPct);
-
-        // Wenn current >= target => 0 Spiele
-        if (current >= target){
-          gamesEl.textContent = "0";
-          return;
-        }
-
-        // Winrate == 50 => Unlimited
-        // (Auch bei 50.0x die sehr nahe dran sind, behandeln wir es als 50)
-        if (Math.abs(winPct - 50) < 1e-9){
-          gamesEl.textContent = "Unlimited";
-          return;
-        }
-
-        const delta = target - current;
-        const p = winPct / 100;
-
-        // Erwarteter MMR pro Spiel: 25*(2p - 1)
-        const avg = MMR_PER_GAME * (2 * p - 1);
-
-        // Sicherheit: falls avg <= 0, ebenfalls Unlimited
-        if (avg <= 0){
-          gamesEl.textContent = "Unlimited";
-          return;
-        }
-
-        const rawGames = delta / avg;
-        const needed = ceilSafe(rawGames);
-        gamesEl.textContent = String(needed);
+      if (avg <= 0){
+        gamesEl.textContent = "Unlimited";
+        return;
       }
 
-      // Auto-update bei jeder Änderung (ohne Button)
-      ["input", "change"].forEach(evt => {
-        currentEl.addEventListener(evt, compute);
-        targetEl.addEventListener(evt, compute);
-        winEl.addEventListener(evt, compute);
-      });
+      const needed = ceilSafe(delta / avg);
+      gamesEl.textContent = String(needed);
+    }
 
-      // Initial berechnen
-      compute();
-    })();
+    [currentEl, targetEl, winEl].forEach(el => {
+      el.addEventListener("input", compute);
+    });
+
+    compute();
   </script>
 </body>
 </html>
