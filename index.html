@@ -555,19 +555,35 @@ function sanitizeNumberInput(el, isFloat){
 }
 
     }
+winEl.addEventListener("input", () => {
+  // nur Zahlen + optional ein Punkt
+  let v = String(winEl.value ?? "")
+    .replace(",", ".")
+    .replace(/[^0-9.]/g, "");
 
-    winEl.addEventListener("input", () => {
-      sanitizeNumberInput(winEl, true);
-      normalizeWinrate();
-      compute();
-    });
+  // maximal ein Dezimalpunkt
+  const firstDot = v.indexOf(".");
+  if (firstDot !== -1){
+    v = v.slice(0, firstDot + 1) + v.slice(firstDot + 1).replace(/\./g, "");
+  }
 
-    [currentEl, targetEl].forEach(el => {
-      el.addEventListener("input", () => {
-        sanitizeNumberInput(el, false);
-        compute();
-      });
-    });
+  winEl.value = v;
+
+  // auf 0–100 begrenzen
+  if (winEl.value !== ""){
+    const n = Number(winEl.value);
+    if (Number.isFinite(n)){
+      winEl.value = String(Math.min(100, Math.max(0, n)));
+    }
+  }
+
+  compute();
+});
+
+
+  [currentEl, targetEl].forEach(el => {
+  el.addEventListener("input", compute);
+  });
 
     // ---------- Core compute ----------
     let lastGames = null;
@@ -741,4 +757,5 @@ function sanitizeNumberInput(el, isFloat){
 </body>
 </html>
 ```
+
 
